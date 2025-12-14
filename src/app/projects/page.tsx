@@ -1,14 +1,17 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import PropertyCard from '../../components/property/property-card';
 import FilterModal from '../../components/property/FilterModal';
 import FAQ from '../../components/home/FAQ';
 import { getPaginatedProperties, FilterOptions, Property } from '../../lib/properties';
 
 export default function ProjectsPage() {
+  const searchParams = useSearchParams();
   const [properties, setProperties] = useState<Property[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterOptions>({});
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -17,45 +20,108 @@ export default function ProjectsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const propertiesPerPage = 9;
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch properties from API
+  // Debounce search query to avoid excessive API calls
+  useEffect(() => {
+    // Clear existing timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // Set new timer
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500); // 500ms debounce delay
+
+    // Cleanup on unmount or when searchQuery changes
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [searchQuery]);
+
+  // Read city or locality from URL params on mount
+  useEffect(() => {
+    const cityParam = searchParams.get('city');
+    const localityParam = searchParams.get('locality');
+    
+    if (localityParam) {
+      // Use locality filter if available (more specific)
+      setFilters({ locality: localityParam });
+    } else if (cityParam) {
+      // Fallback to city filter
+      setFilters({ city: cityParam });
+    }
+  }, [searchParams]);
+
+  // Fetch properties from API with filters
   useEffect(() => {
     const loadProperties = async () => {
       setIsLoading(true);
       setError(null);
       
+      // Minimum loading time to prevent flickering (300ms)
+      const minLoadingTime = 300;
+      const startTime = Date.now();
+      
       try {
-        // Combine search query with filters
+        // Combine search query with filters - all filtering is done by API
         const apiFilters: FilterOptions = {
           ...filters,
         };
         
-        // Add search to filters if provided
-        if (searchQuery.trim()) {
-          apiFilters.search = searchQuery.trim();
+        // Add debounced search to filters if provided
+        if (debouncedSearchQuery.trim()) {
+          apiFilters.search = debouncedSearchQuery.trim();
         }
         
+        // getPaginatedProperties now uses API-based filtering
         const result = await getPaginatedProperties(apiFilters, currentPage, propertiesPerPage);
         
         setProperties(result.properties);
         setTotalPages(result.pagination.totalPages);
         setTotalProperties(result.pagination.total);
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Properties loaded:', {
+            count: result.properties.length,
+            total: result.pagination.total,
+            page: currentPage,
+            filters: apiFilters
+          });
+        }
+        
+        // Ensure minimum loading time
+        const elapsedTime = Date.now() - startTime;
+        if (elapsedTime < minLoadingTime) {
+          await new Promise(resolve => setTimeout(resolve, minLoadingTime - elapsedTime));
+        }
       } catch (err) {
         console.error('Error loading properties:', err);
         setError('Failed to load properties. Please try again later.');
         setProperties([]);
+        setTotalPages(0);
+        setTotalProperties(0);
+        
+        // Ensure minimum loading time even on error
+        const elapsedTime = Date.now() - startTime;
+        if (elapsedTime < minLoadingTime) {
+          await new Promise(resolve => setTimeout(resolve, minLoadingTime - elapsedTime));
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     loadProperties();
-  }, [filters, searchQuery, currentPage]);
+  }, [filters, debouncedSearchQuery, currentPage, propertiesPerPage]);
 
-  // Reset to page 1 when filters or search change
+  // Reset to page 1 when filters or debounced search change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters, searchQuery]);
+  }, [filters, debouncedSearchQuery]);
 
   const propertyRows = useMemo(() => {
     const rows: Property[][] = [];
@@ -65,14 +131,14 @@ export default function ProjectsPage() {
     return rows;
   }, [properties]);
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  }, []);
 
-  const handleApplyFilters = (newFilters: FilterOptions) => {
+  const handleApplyFilters = useCallback((newFilters: FilterOptions) => {
     setFilters(newFilters);
-  };
+  }, []);
 
   return (
     <>

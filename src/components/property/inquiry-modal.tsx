@@ -51,7 +51,7 @@ export default function InquiryModal({ isOpen, onClose, propertyId, propertyTitl
 
     try {
       const formDataToSend = new FormData(e.currentTarget)
-      formDataToSend.append('access_key', '553b3d69-1e10-49a1-9de1-2d4e0160ac97')
+      formDataToSend.append('access_key', '2f1d554b-4ad2-4bdb-b539-7fdf732d831f')
       formDataToSend.append('property', propertyTitle)
 
       const response = await fetch('https://api.web3forms.com/submit', {

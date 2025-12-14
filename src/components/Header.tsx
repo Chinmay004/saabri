@@ -59,14 +59,6 @@ export default function Header() {
         >
           About Us
         </Link>
-        <Link 
-          href="/why-dubai" 
-          className={`tracking-[0.28px] transition-colors ${
-            isActive('/why-dubai') ? 'text-black' : 'text-[#636363]'
-          }`}
-        >
-          Why Dubai
-        </Link>
       </nav>
 
       {/* Mobile Menu Button */}
@@ -131,15 +123,6 @@ export default function Header() {
             onClick={() => setIsMenuOpen(false)}
           >
             About Us
-          </Link>
-          <Link 
-            href="/why-dubai" 
-            className={`tracking-[0.28px] py-2 transition-colors ${
-              isActive('/why-dubai') ? 'text-black' : 'text-[#636363]'
-            }`}
-            onClick={() => setIsMenuOpen(false)}
-          >
-            Why Dubai
           </Link>
         </nav>
       )}

@@ -4,34 +4,89 @@ import Image from 'next/image';
 // Footer - Site footer with links, contact info, and social media
 const Footer = () => {
   return (
-    <footer className="bg-white px-4 md:px-6 lg:px-20 py-12 lg:py-16">
-      <div className="container mx-auto flex flex-col">
-        {/* Top Section - Logo/Description and Nav */}
-        <div className="flex flex-col lg:flex-row gap-8 lg:gap-0 justify-between items-center lg:items-start">
-          {/* Left Column - Logo and Description */}
-          <div className="flex flex-col gap-5 max-w-[360px] w-full md:w-auto text-center lg:text-left items-center lg:items-start">
-            {/* Logo */}
+    <footer className="bg-white px-5 md:px-8 lg:px-16 xl:px-30 py-10 md:py-12 lg:py-14 h-full">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10 lg:gap-32 xl:gap-40 justify-between items-start h-full">
+        {/* Left Section */}
+        <div className="flex flex-col justify-between h-full gap-6 md:gap-8 lg:gap-32 xl:gap-48">
+          {/* Top - Description and Learn More */}
+          
+          <div className="flex flex-col gap-4">
             <Link href="/" className="flex items-center">
-              <Image src="/logo.webp" alt="Saabri Group Logo" width={120} height={120} />
+                <Image src="/logo.webp" alt="Saabri Group Logo" width={120} height={120} />
             </Link>
-            
-            {/* Description */}
-            <p className="text-sm text-[#666] leading-relaxed">
-              The first free end-to-end analytics service for the site, designed to work with enterprises of various levels and business segments.
-            </p>
+            <div className="flex flex-col gap-3 md:gap-4">
+              <p className="font-sans text-sm md:text-base text-[#484848] leading-[1.4] w-full lg:w-[380px] xl:w-[420px]">
+              Where vision meets Value
+              </p>
+              <div className="hidden lg:flex gap-3 items-center">
+                <p className="text-xs text-white font-semibold">More about us</p>
+                <div className="w-2.5 h-2.5 bg-white rounded-[10px]"></div>
+              </div>
+            </div>
           </div>
           
-          {/* Right Column - Navigation Links */}
-          <nav className="flex flex-wrap gap-6 lg:gap-8 text-sm text-[#484848] justify-center lg:justify-start">
-            <a href="#" className="hover:text-[#00473c] transition-colors">About.</a>
-            <a href="#" className="hover:text-[#00473c] transition-colors">Testimonials.</a>
-            <a href="#" className="hover:text-[#00473c] transition-colors">Pricing.</a>
-            <a href="#" className="hover:text-[#00473c] transition-colors">Contacts.</a>
-          </nav>
+          {/* Bottom - Social Media and Copyright - Desktop */}
+          <div className="hidden lg:flex justify-between items-end w-full">
+            {/* Social Media Icons */}
+            <div className="flex gap-2.5">
+              <div className="flex flex-col gap-2.5">
+                <a href="#" className="w-6 h-6 flex items-center justify-center">
+                  <Image src="/okru.svg" alt="OK.ru" width={18} height={18} />
+                </a>
+                <a href="#" className="w-6 h-6 flex items-center justify-center">
+                  <Image src="/vk.svg" alt="VK" width={18} height={18} />
+                </a>
+                <a href="#" className="w-6 h-6 flex items-center justify-center">
+                  <Image src="/telegram.svg" alt="Telegram" width={18} height={18} />
+                </a>
+              </div>
+              <div className="flex flex-col justify-end gap-2.5">
+                <a href="#" className="w-6 h-6 flex items-center justify-center">
+                  <Image src="/facebook.svg" alt="Facebook" width={18} height={18} />
+                </a>
+                <a href="#" className="w-6 h-6 flex items-center justify-center">
+                  <Image src="/instagram.svg" alt="Instagram" width={18} height={18} />
+                </a>
+              </div>
+            </div>
+            
+            {/* Copyright */}
+            <div className="font-sans text-xs text-[#484848] leading-[1.4]">
+              <p>© {new Date().getFullYear()} — Copyright</p>
+              <p>All Rights reserved</p>
+            </div>
+          </div>
         </div>
         
-        {/* Bottom Section */}
-        <div className="flex flex-col lg:flex-row justify-between items-center lg:items-end gap-6 md:gap-8 mt-8 md:mt-12 lg:mt-24">
+        {/* Right Section */}
+        <div className="flex flex-col justify-between h-full gap-10 md:gap-12 lg:gap-0">
+          {/* Top - Navigation Links */}
+          <nav className="flex flex-row gap-8 md:gap-10 text-sm md:text-base text-[#484848] font-sans">
+            <a href="/projects" className="hover:text-black transition-colors">Projects.</a>
+            <a href="/about" className="hover:text-black transition-colors">About Us.</a>
+          </nav>
+          
+          {/* Bottom - Contact and Location */}
+          <div className="flex flex-col gap-6 md:gap-7 lg:gap-12 xl:gap-16">
+            {/* Contact Us */}
+            <div className="flex flex-col gap-3 md:gap-4">
+              <div className="flex flex-col font-sans text-sm md:text-sm text-[#484848] leading-[1.6]">
+                <p>+91 0525664490</p>
+                <p>Info@saabriazizproperties.com</p>
+              </div>
+            </div>
+            
+            {/* Location */}
+            <div className="flex flex-col gap-3 md:gap-4">
+              <p className="font-sans text-sm text-[#484848] leading-[1.6] w-full lg:w-[280px] xl:w-[300px]">
+                Business bay, Dubai, UAE
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile - Social Media and Copyright */}
+        <div className="flex lg:hidden justify-between items-end w-full">
           {/* Social Media Icons */}
           <div className="flex flex-col gap-4 md:gap-5 items-center lg:items-start">
             <div className="flex gap-4 md:gap-5">
@@ -58,32 +113,9 @@ const Footer = () => {
           </div>
           
           {/* Copyright */}
-          <div className="text-xs md:text-sm text-[#666] leading-relaxed text-center">
-            <p>© {new Date().getFullYear()} — Copyright</p>
+          <div className="font-sans text-xs text-[#484848] leading-[1.4]">
+            <p>© 2021 — Copyright</p>
             <p>All Rights reserved</p>
-          </div>
-          
-          {/* Contact and Location */}
-          <div className="flex flex-col gap-3 md:gap-4 text-center lg:text-left">
-            {/* Contact Info */}
-            <div className="text-xs md:text-sm text-[#484848] leading-relaxed">
-              <p>+1 (999) 888-77-66</p>
-              <p>hello@logoipsum.com</p>
-            </div>
-            
-            {/* Location */}
-            <div className="text-xs md:text-sm text-[#484848] leading-relaxed">
-              <p>483920, Moscow,</p>
-              <p>Myasnitskaya 22/2/5, Office 4</p>
-            </div>
-          </div>
-          
-          {/* Languages */}
-          <div className="flex gap-3 md:gap-4 text-xs md:text-sm text-[#666] justify-center lg:justify-start">
-            <span className="hover:text-[#00473c] transition-colors cursor-pointer">Es</span>
-            <span className="hover:text-[#00473c] transition-colors cursor-pointer">Fr</span>
-            <span className="hover:text-[#00473c] transition-colors cursor-pointer">De</span>
-            <span className="hover:text-[#00473c] transition-colors cursor-pointer">Ru</span>
           </div>
         </div>
       </div>

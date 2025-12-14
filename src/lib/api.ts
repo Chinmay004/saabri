@@ -27,10 +27,10 @@ export interface ApiFilterOptions {
     min: number;
     max: number;
   };
-  min_bedrooms?: string[];
-  max_bedrooms?: string[];
-  min_bathrooms?: string[];
-  max_bathrooms?: string[];
+  min_bedrooms?: string[] | number[];
+  max_bedrooms?: string[] | number[];
+  min_bathrooms?: string[] | number[];
+  max_bathrooms?: string[] | number[];
   handover_year?: number[];
   handover_year_range?: {
     min: number;
@@ -150,12 +150,15 @@ export async function fetchProperties(
   const url = `${API_BASE_URL}?page=${page}&limit=${limit}`;
 
   try {
+    // Use Next.js fetch caching - cache for 5 minutes, revalidate in background
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(filters),
+      // Cache for 5 minutes, allow stale-while-revalidate
+      next: { revalidate: 300 },
     });
 
     if (!response.ok) {
@@ -173,19 +176,43 @@ export async function fetchProperties(
 
 export async function fetchPropertyById(id: string): Promise<ApiProperty | null> {
   try {
-    // Try to fetch with a search filter first (if API supports searching by ID)
-    // Otherwise, fetch multiple pages until we find it
+    // Optimized: Try searching by ID first using the search filter
+    // This is much more efficient than looping through pages
+    const searchResponse = await fetchProperties({ search: id }, 1, 100);
+    
+    if (searchResponse.success && searchResponse.data) {
+      // Find exact match by ID
+      const found = searchResponse.data.find(
+        (p) => p.id === id || 
+               p.id?.toString() === id || 
+               p._id === id ||
+               p._id?.toString() === id
+      );
+      
+      if (found) {
+        return found;
+      }
+    }
+    
+    // Fallback: If search didn't work, try first few pages (but limit to 3 pages for performance)
+    // This is a backup strategy in case the API doesn't support ID search
     let page = 1;
     const limit = 100;
-    let found = null;
+    const maxPages = 3; // Reduced from 10 to 3 for better performance
     
-    // Try up to 10 pages (1000 properties) to find the property
-    while (page <= 10 && !found) {
+    while (page <= maxPages) {
       const response = await fetchProperties({}, page, limit);
       
       if (response.success && response.data) {
-        found = response.data.find((p) => p.id === id || p.id?.toString() === id);
-        if (found) break;
+        const found = response.data.find(
+          (p) => p.id === id || 
+                 p.id?.toString() === id ||
+                 p._id === id ||
+                 p._id?.toString() === id
+        );
+        if (found) {
+          return found;
+        }
         
         // If we've reached the last page, stop searching
         if (!response.pagination || page >= response.pagination.total_pages) {
@@ -198,7 +225,7 @@ export async function fetchPropertyById(id: string): Promise<ApiProperty | null>
       page++;
     }
     
-    return found || null;
+    return null;
   } catch (error) {
     console.error('Error fetching property by ID:', error);
     return null;

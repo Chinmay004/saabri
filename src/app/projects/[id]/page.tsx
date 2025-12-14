@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -29,15 +29,38 @@ export default function PropertyDetailPage() {
     const loadProperty = async () => {
       if (id) {
         setIsLoading(true);
+        
+        // Minimum loading time to prevent flickering (400ms for detail page)
+        const minLoadingTime = 400;
+        const startTime = Date.now();
+        
         try {
-          const propertyData = await getPropertyById(id);
+          // Load property and related properties in parallel for better performance
+          const [propertyData, related] = await Promise.all([
+            getPropertyById(id),
+            Promise.resolve(null), // We'll load related after we have property data
+          ]);
+          
           if (propertyData) {
             setProperty(propertyData);
-            const related = await getRelatedProperties(id, propertyData.type, 3);
-            setRelatedProperties(related);
+            // Load related properties after main property is loaded
+            const relatedProps = await getRelatedProperties(id, propertyData.type, 3);
+            setRelatedProperties(relatedProps);
+          }
+          
+          // Ensure minimum loading time
+          const elapsedTime = Date.now() - startTime;
+          if (elapsedTime < minLoadingTime) {
+            await new Promise(resolve => setTimeout(resolve, minLoadingTime - elapsedTime));
           }
         } catch (error) {
           console.error('Error loading property:', error);
+          
+          // Ensure minimum loading time even on error
+          const elapsedTime = Date.now() - startTime;
+          if (elapsedTime < minLoadingTime) {
+            await new Promise(resolve => setTimeout(resolve, minLoadingTime - elapsedTime));
+          }
         } finally {
           setIsLoading(false);
         }
@@ -46,6 +69,40 @@ export default function PropertyDetailPage() {
 
     loadProperty();
   }, [id]);
+
+  // Memoize modal handlers (must be before early returns)
+  const handleOpenInquiry = useCallback(() => setIsModalOpen(true), []);
+  const handleCloseInquiry = useCallback(() => setIsModalOpen(false), []);
+  const handleOpenDescription = useCallback(() => setIsDescriptionModalOpen(true), []);
+  const handleCloseDescription = useCallback(() => setIsDescriptionModalOpen(false), []);
+  const handleOpenImageViewer = useCallback(() => setIsImageViewerOpen(true), []);
+  const handleCloseImageViewer = useCallback(() => setIsImageViewerOpen(false), []);
+  const handleOpenAmenities = useCallback(() => setIsAmenitiesModalOpen(true), []);
+  const handleCloseAmenities = useCallback(() => setIsAmenitiesModalOpen(false), []);
+  const handleImageSelect = useCallback((index: number) => setSelectedImage(index), []);
+
+  // Memoize image processing
+  const images = useMemo(() => {
+    if (!property) return [];
+    const allImages = [
+      property.mainImage,
+      ...property.gallery.filter((img: string) => img && img.trim() !== '' && img !== property.mainImage)
+    ].filter((img: string) => img && img.trim() !== '');
+    
+    return allImages.length > 0 
+      ? allImages 
+      : ['https://via.placeholder.com/800x600?text=No+Image'];
+  }, [property]);
+  
+  const descriptionPreview = useMemo(() => {
+    if (!property) return '';
+    return property.description.length > 200 ? property.description.substring(0, 200) : property.description;
+  }, [property]);
+  
+  const hasMoreDescription = useMemo(() => {
+    if (!property) return false;
+    return property.description.length > 200;
+  }, [property]);
 
   if (isLoading) {
     return (
@@ -70,20 +127,6 @@ export default function PropertyDetailPage() {
     );
   }
 
-  // Filter out empty images and ensure we have at least one image
-  const allImages = [
-    property.mainImage,
-    ...property.gallery.filter((img: string) => img && img.trim() !== '' && img !== property.mainImage)
-  ].filter((img: string) => img && img.trim() !== '');
-  
-  // Use placeholder if no images available
-  const images = allImages.length > 0 
-    ? allImages 
-    : ['https://via.placeholder.com/800x600?text=No+Image'];
-  
-  const descriptionPreview = property.description.length > 200 ? property.description.substring(0, 200) : property.description;
-  const hasMoreDescription = property.description.length > 200;
-
   return (
     <>
       <main className="bg-neutral-50 min-h-screen pt-[120px] pb-0">
@@ -98,7 +141,7 @@ export default function PropertyDetailPage() {
                   {images[selectedImage] && images[selectedImage].trim() !== '' ? (
                     <div 
                       className="relative w-full h-[280px] sm:h-[380px] md:h-[420px] lg:h-[443px] rounded-[10px] overflow-hidden cursor-pointer bg-gray-100"
-                      onClick={() => setIsImageViewerOpen(true)}
+                      onClick={handleOpenImageViewer}
                     >
                       <Image
                         src={images[selectedImage]}
@@ -107,6 +150,7 @@ export default function PropertyDetailPage() {
                         className="object-cover"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 569px"
                         priority
+                        loading="eager"
                       />
                     </div>
                   ) : (
@@ -135,9 +179,9 @@ export default function PropertyDetailPage() {
                               key={idx}
                               onClick={() => {
                                 if (isLastWithMore) {
-                                  setIsImageViewerOpen(true);
+                                  handleOpenImageViewer();
                                 } else {
-                                  setSelectedImage(idx);
+                                  handleImageSelect(idx);
                                 }
                               }}
                               className={`relative w-[72px] h-[54px] rounded-[8px] overflow-hidden cursor-pointer transition-all flex-shrink-0 ${
@@ -146,13 +190,14 @@ export default function PropertyDetailPage() {
                                   : 'opacity-70 hover:opacity-100'
                               }`}
                             >
-                              <Image
-                                src={image}
-                                alt={`Thumbnail ${idx + 1}`}
-                                fill
-                                className="object-cover"
-                                sizes="72px"
-                              />
+                            <Image
+                              src={image}
+                              alt={`Thumbnail ${idx + 1}`}
+                              fill
+                              className="object-cover"
+                              sizes="72px"
+                              loading="lazy"
+                            />
                               {isLastWithMore && (
                                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                                   <span className="text-white text-xs font-semibold">
@@ -179,9 +224,9 @@ export default function PropertyDetailPage() {
                             key={idx}
                             onClick={() => {
                               if (isLastWithMore) {
-                                setIsImageViewerOpen(true);
+                                handleOpenImageViewer();
                               } else {
-                                setSelectedImage(idx);
+                                handleImageSelect(idx);
                               }
                             }}
                             className={`relative w-[94px] lg:w-[96px] h-[66px] lg:h-[70px] rounded-[8px] overflow-hidden cursor-pointer transition-all flex-shrink-0 ${
@@ -196,6 +241,7 @@ export default function PropertyDetailPage() {
                               fill
                               className="object-cover"
                               sizes="96px"
+                              loading="lazy"
                             />
                             {isLastWithMore && (
                               <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
@@ -234,7 +280,7 @@ export default function PropertyDetailPage() {
                       <>
                         ...{' '}
                         <button
-                          onClick={() => setIsDescriptionModalOpen(true)}
+                          onClick={handleOpenDescription}
                           className="text-[#1f2462] hover:underline font-medium"
                         >
                           Read more
@@ -298,7 +344,7 @@ export default function PropertyDetailPage() {
                 {/* Enquire Button */}
                 <div>
                   <button
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={handleOpenInquiry}
                     className="w-full bg-[#1f2462] text-white text-base md:text-lg font-medium px-4 md:px-6 py-3 md:py-4 rounded-[4px] hover:bg-[#1a1f5a] transition-colors"
                   >
                     Enquire Now
@@ -316,6 +362,30 @@ export default function PropertyDetailPage() {
                 <div className="flex flex-col gap-1">
                   <span className="text-[#61656e] text-xs md:text-sm lg:text-[16px] font-medium leading-[20px] md:leading-[27px]">Developer Name</span>
                   <span className="text-black text-sm md:text-base lg:text-[18px] font-medium leading-[20px] md:leading-[27px]">{property.developer}</span>
+                </div>
+              )}
+              
+              {/* City - only show if exists and not empty */}
+              {property.city && typeof property.city === 'string' && property.city.trim() !== '' && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-[#61656e] text-xs md:text-sm lg:text-[16px] font-medium leading-[20px] md:leading-[27px]">City</span>
+                  <span className="text-black text-sm md:text-base lg:text-[18px] font-medium leading-[20px] md:leading-[27px]">{property.city}</span>
+                </div>
+              )}
+              
+              {/* Locality - only show if exists and not empty */}
+              {property.locality && typeof property.locality === 'string' && property.locality.trim() !== '' && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-[#61656e] text-xs md:text-sm lg:text-[16px] font-medium leading-[20px] md:leading-[27px]">Locality</span>
+                  <span className="text-black text-sm md:text-base lg:text-[18px] font-medium leading-[20px] md:leading-[27px]">{property.locality}</span>
+                </div>
+              )}
+              
+              {/* Bedrooms - only show if exists and greater than 0 */}
+              {property.bedrooms && property.bedrooms > 0 && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-[#61656e] text-xs md:text-sm lg:text-[16px] font-medium leading-[20px] md:leading-[27px]">Bedrooms</span>
+                  <span className="text-black text-sm md:text-base lg:text-[18px] font-medium leading-[20px] md:leading-[27px]">{property.bedrooms}</span>
                 </div>
               )}
               
@@ -337,7 +407,7 @@ export default function PropertyDetailPage() {
                     </span>
                     {property.amenities.length > 2 && (
                       <button
-                        onClick={() => setIsAmenitiesModalOpen(true)}
+                        onClick={handleOpenAmenities}
                         className="text-[#1f2462] text-xs md:text-sm hover:underline text-left"
                       >
                         +{property.amenities.length - 2} more
@@ -373,33 +443,11 @@ export default function PropertyDetailPage() {
                 </div>
               )}
               
-              {/* Security - only show if exists */}
-              {property.security !== undefined && property.security !== null && (
-                <div className="flex flex-col gap-1">
-                  <span className="text-[#61656e] text-xs md:text-sm lg:text-[16px] font-medium leading-[20px] md:leading-[27px]">Security</span>
-                  <span className="text-black text-sm md:text-base lg:text-[18px] font-medium leading-[20px] md:leading-[27px]">
-                    {typeof property.security === 'boolean' 
-                      ? (property.security ? 'Yes' : 'No')
-                      : (typeof property.security === 'string' 
-                          ? (property.security.toLowerCase() === 'true' || property.security.toLowerCase() === 'yes' || property.security === '1' ? 'Yes' : property.security)
-                          : 'Yes')}
-                  </span>
-                </div>
-              )}
-              
               {/* Furnished - only show if exists and not empty */}
               {property.furnished && typeof property.furnished === 'string' && property.furnished.trim() !== '' && (
                 <div className="flex flex-col gap-1">
-                  <span className="text-[#61656e] text-xs md:text-sm lg:text-[16px] font-medium leading-[20px] md:leading-[27px]">Furnished</span>
+                  <span className="text-[#61656e] text-xs md:text-sm lg:text-[16px] font-medium leading-[20px] md:leading-[27px]">Furnishing</span>
                   <span className="text-black text-sm md:text-base lg:text-[18px] font-medium leading-[20px] md:leading-[27px]">{property.furnished}</span>
-                </div>
-              )}
-              
-              {/* Payment Plan - only show if exists and not empty */}
-              {property.paymentPlan && typeof property.paymentPlan === 'string' && property.paymentPlan.trim() !== '' && (
-                <div className="flex flex-col gap-1">
-                  <span className="text-[#61656e] text-xs md:text-sm lg:text-[16px] font-medium leading-[20px] md:leading-[27px]">Payment Plan</span>
-                  <span className="text-black text-sm md:text-base lg:text-[18px] font-medium leading-[20px] md:leading-[27px]">{property.paymentPlan}</span>
                 </div>
               )}
             </div>
@@ -426,21 +474,21 @@ export default function PropertyDetailPage() {
         {/* Modals */}
         <InquiryModal
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          onClose={handleCloseInquiry}
           propertyId={property.id?.toString() || ''}
           propertyTitle={property.title}
         />
 
         <DescriptionModal
           isOpen={isDescriptionModalOpen}
-          onClose={() => setIsDescriptionModalOpen(false)}
+          onClose={handleCloseDescription}
           title={property.title}
           description={property.description}
         />
 
         <ImageViewerModal
           isOpen={isImageViewerOpen}
-          onClose={() => setIsImageViewerOpen(false)}
+          onClose={handleCloseImageViewer}
           images={images}
           initialIndex={selectedImage}
           propertyTitle={property.title}
@@ -448,7 +496,7 @@ export default function PropertyDetailPage() {
 
         <AmenitiesModal
           isOpen={isAmenitiesModalOpen}
-          onClose={() => setIsAmenitiesModalOpen(false)}
+          onClose={handleCloseAmenities}
           amenities={property.amenities || []}
           propertyTitle={property.title}
         />

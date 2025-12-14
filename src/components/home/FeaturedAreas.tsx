@@ -3,41 +3,54 @@
 import { useRef, useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { fetchProperties } from '../../lib/api';
 
-const featuredAreas = [
+interface FeaturedArea {
+  id: number;
+  name: string;
+  description: string;
+  image: string;
+  cityFilter: string; // City name to use for API filtering
+  localityFilter?: string; // Optional locality for more specific filtering
+}
+
+const allFeaturedAreas: FeaturedArea[] = [
   {
     id: 1,
     name: 'Downtown Dubai',
     description: 'Iconic luxury investments',
     image: '/home/featured-areas/downtown-dubai.webp',
+    cityFilter: 'Dubai',
+    localityFilter: 'Downtown Dubai',
   },
   {
     id: 2,
     name: 'Business Bay',
     description: 'Smart returns and capital appreciation',
     image: '/home/featured-areas/business-bay.webp',
+    cityFilter: 'Dubai',
+    localityFilter: 'Business Bay',
   },
   {
     id: 3,
     name: 'Dubai Hills Estate',
     description: 'Modern villas with growth potential',
     image: '/home/featured-areas/dubai-hills-estate.webp',
+    cityFilter: 'Dubai',
+    localityFilter: 'Dubai Hills',
   },
   {
     id: 4,
     name: 'Dubai South',
     description: 'Future-growth hub near Expo City',
     image: '/home/featured-areas/dubai-south.webp',
+    cityFilter: 'Dubai',
+    localityFilter: 'Dubai South',
   }
 ];
 
 interface AreaCardProps {
-  area: {
-    id: number;
-    name: string;
-    description: string;
-    image: string;
-  };
+  area: FeaturedArea;
   index: number;
 }
 
@@ -66,10 +79,14 @@ function AnimatedAreaCard({ area, index }: AreaCardProps) {
     };
   }, []);
 
+  // Build URL with city filter (use locality if available, otherwise city)
+  const filterValue = area.localityFilter || area.cityFilter;
+  const filterParam = area.localityFilter ? 'locality' : 'city';
+  
   return (
     <Link
       ref={cardRef}
-      href="#"
+      href={`/projects?${filterParam}=${encodeURIComponent(filterValue)}`}
       className={`relative h-[350px] md:h-[400px] lg:h-[501px] w-[280px] md:w-[320px] lg:w-[353px] shrink-0 rounded-[16px] overflow-hidden group transition-all duration-700 ease-out hover:scale-[1.02] ${
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
       }`}
@@ -102,6 +119,82 @@ function AnimatedAreaCard({ area, index }: AreaCardProps) {
 
 export default function FeaturedAreas() {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [featuredAreas, setFeaturedAreas] = useState<FeaturedArea[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Check which areas have properties using API filters
+  useEffect(() => {
+    const checkAreasWithProperties = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Check each area by calling the API with appropriate filters
+        const areasWithProperties: FeaturedArea[] = [];
+        
+        // Check all areas in parallel for better performance
+        const areaChecks = await Promise.allSettled(
+          allFeaturedAreas.map(async (area) => {
+            try {
+              // Use locality filter if available, otherwise use city filter
+              // According to API docs: locality is a string, city can be string or array
+              const filters: import('../../lib/api').ApiFilterOptions = {};
+              
+              if (area.localityFilter) {
+                // Use locality for more specific filtering (e.g., "Downtown Dubai")
+                filters.locality = area.localityFilter;
+              } else {
+                // Use city filter (e.g., "Dubai")
+                filters.city = area.cityFilter;
+              }
+              
+              // Call API with filter to check if properties exist
+              // Request only 1 property to check if any exist
+              const response = await fetchProperties(filters, 1, 1);
+              
+              // If API returns at least one property, include this area
+              // Also check pagination.total to see if there are any properties
+              const hasProperties = response.success && 
+                response.data && 
+                (response.data.length > 0 || (response.pagination && response.pagination.total > 0));
+              
+              if (hasProperties) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.log(`Area "${area.name}" has properties:`, response.pagination?.total || response.data?.length);
+                }
+                return area;
+              }
+              
+              if (process.env.NODE_ENV === 'development') {
+                console.log(`Area "${area.name}" has no properties`);
+              }
+              
+              return null;
+            } catch (error) {
+              console.error(`Error checking area ${area.name}:`, error);
+              return null;
+            }
+          })
+        );
+        
+        // Collect areas that have properties
+        areaChecks.forEach((result) => {
+          if (result.status === 'fulfilled' && result.value !== null) {
+            areasWithProperties.push(result.value);
+          }
+        });
+        
+        setFeaturedAreas(areasWithProperties);
+      } catch (error) {
+        console.error('Error checking areas with properties:', error);
+        // On error, show all areas as fallback
+        setFeaturedAreas(allFeaturedAreas);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAreasWithProperties();
+  }, []);
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -115,6 +208,11 @@ export default function FeaturedAreas() {
       });
     }
   };
+
+  // Don't render if no areas have properties
+  if (!isLoading && featuredAreas.length === 0) {
+    return null;
+  }
 
   return (
     <section className="bg-white py-8 md:py-12 lg:py-[62px]">
@@ -147,13 +245,22 @@ export default function FeaturedAreas() {
         </div>
         
         {/* Cards Horizontal Scroll - Left padding, right spacer for gap */}
-        <div ref={scrollRef} className="flex gap-4 md:gap-6 lg:gap-[24px] items-start w-full overflow-x-auto scrollbar-hide pl-4 md:pl-8 lg:pl-[80px]">
-          {featuredAreas.map((area, index) => (
-            <AnimatedAreaCard key={area.id} area={area} index={index} />
-          ))}
-          {/* Right spacer to match left padding */}
-          <div className="shrink-0 w-4 md:w-8 lg:w-[80px] h-px" aria-hidden="true" />
-        </div>
+        {isLoading ? (
+          <div className="flex gap-4 md:gap-6 lg:gap-[24px] items-start w-full overflow-x-auto scrollbar-hide pl-4 md:pl-8 lg:pl-[80px]">
+            <div className="h-[350px] md:h-[400px] lg:h-[501px] w-[280px] md:w-[320px] lg:w-[353px] shrink-0 rounded-[16px] bg-gray-200 animate-pulse" />
+            <div className="h-[350px] md:h-[400px] lg:h-[501px] w-[280px] md:w-[320px] lg:w-[353px] shrink-0 rounded-[16px] bg-gray-200 animate-pulse" />
+            <div className="h-[350px] md:h-[400px] lg:h-[501px] w-[280px] md:w-[320px] lg:w-[353px] shrink-0 rounded-[16px] bg-gray-200 animate-pulse" />
+            <div className="shrink-0 w-4 md:w-8 lg:w-[80px] h-px" aria-hidden="true" />
+          </div>
+        ) : (
+          <div ref={scrollRef} className="flex gap-4 md:gap-6 lg:gap-[24px] items-start w-full overflow-x-auto scrollbar-hide pl-4 md:pl-8 lg:pl-[80px]">
+            {featuredAreas.map((area, index) => (
+              <AnimatedAreaCard key={area.id} area={area} index={index} />
+            ))}
+            {/* Right spacer to match left padding */}
+            <div className="shrink-0 w-4 md:w-8 lg:w-[80px] h-px" aria-hidden="true" />
+          </div>
+        )}
       </div>
     </section>
   );

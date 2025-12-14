@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { memo } from 'react';
 import { formatPrice } from '../../lib/properties';
 
 interface Property {
@@ -18,7 +19,7 @@ interface PropertyCardProps {
   property: Property;
 }
 
-export default function PropertyCard({ property }: PropertyCardProps) {
+function PropertyCard({ property }: PropertyCardProps) {
   const {
     id,
     title,
@@ -44,6 +45,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
               fill
               className="object-cover"
               sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 401px"
+              loading="lazy"
             />
           </div>
         ) : (
@@ -109,3 +111,6 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     </Link>
   );
 }
+
+// Memoize component to prevent unnecessary re-renders
+export default memo(PropertyCard);

@@ -86,7 +86,7 @@ export default function FilterModal({ isOpen, onClose, filters, onApplyFilters }
                 Property Type
               </label>
               <select
-                value={localFilters.type || ''}
+                value={typeof localFilters.type === 'string' ? localFilters.type : ''}
                 onChange={(e) => setLocalFilters({ ...localFilters, type: e.target.value || undefined })}
                 className="w-full py-2.5 md:py-3 px-3 rounded-[4px] border border-[#dddddd] text-black bg-white focus:outline-none focus:ring-2 focus:ring-[#1f2462] focus:border-transparent"
               >
@@ -98,22 +98,6 @@ export default function FilterModal({ isOpen, onClose, filters, onApplyFilters }
                 <option value="Penthouse">Penthouse</option>
                 <option value="Mansion">Mansion</option>
                 <option value="Duplex">Duplex</option>
-              </select>
-            </div>
-
-            {/* Listing Type */}
-            <div>
-              <label className="block text-black text-sm md:text-base font-medium mb-2">
-                Listing Type
-              </label>
-              <select
-                value={localFilters.listingType || ''}
-                onChange={(e) => setLocalFilters({ ...localFilters, listingType: e.target.value as 'sale' | 'rent' | undefined })}
-                className="w-full py-2.5 md:py-3 px-3 rounded-[4px] border border-[#dddddd] text-black bg-white focus:outline-none focus:ring-2 focus:ring-[#1f2462] focus:border-transparent"
-              >
-                <option value="">All</option>
-                <option value="sale">For Sale</option>
-                <option value="rent">For Rent</option>
               </select>
             </div>
 
@@ -140,30 +124,6 @@ export default function FilterModal({ isOpen, onClose, filters, onApplyFilters }
                 <option value="4">4 Bedrooms</option>
                 <option value="5">5 Bedrooms</option>
                 <option value="6">6+ Bedrooms</option>
-              </select>
-            </div>
-
-            {/* Bathrooms */}
-            <div>
-              <label className="block text-black text-sm md:text-base font-medium mb-2">
-                Bathrooms
-              </label>
-              <select
-                value={localFilters.bathrooms || ''}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setLocalFilters({ 
-                    ...localFilters, 
-                    bathrooms: value ? parseInt(value) : undefined 
-                  });
-                }}
-                className="w-full py-2.5 md:py-3 px-3 rounded-[4px] border border-[#dddddd] text-black bg-white focus:outline-none focus:ring-2 focus:ring-[#1f2462] focus:border-transparent"
-              >
-                <option value="">Any</option>
-                <option value="1">1 Bathroom</option>
-                <option value="2">2 Bathrooms</option>
-                <option value="3">3 Bathrooms</option>
-                <option value="4">4+ Bathrooms</option>
               </select>
             </div>
 
@@ -209,6 +169,79 @@ export default function FilterModal({ isOpen, onClose, filters, onApplyFilters }
                   placeholder="No limit"
                 />
               </div>
+            </div>
+
+            {/* Area Range */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-black text-sm md:text-base font-medium mb-2">
+                  Min Area (sq ft)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={localFilters.minArea || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setLocalFilters({ 
+                      ...localFilters, 
+                      minArea: value && parseInt(value) > 0 ? parseInt(value) : undefined 
+                    });
+                  }}
+                  className="w-full py-2.5 md:py-3 px-3 rounded-[4px] border border-[#dddddd] text-black bg-white placeholder:text-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-[#1f2462] focus:border-transparent"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="block text-black text-sm md:text-base font-medium mb-2">
+                  Max Area (sq ft)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={localFilters.maxArea || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setLocalFilters({ 
+                      ...localFilters, 
+                      maxArea: value && parseInt(value) > 0 ? parseInt(value) : undefined 
+                    });
+                  }}
+                  className="w-full py-2.5 md:py-3 px-3 rounded-[4px] border border-[#dddddd] text-black bg-white placeholder:text-[#9E9E9E] focus:outline-none focus:ring-2 focus:ring-[#1f2462] focus:border-transparent"
+                  placeholder="No limit"
+                />
+              </div>
+            </div>
+
+            {/* Sort Options */}
+            <div>
+              <label className="block text-black text-sm md:text-base font-medium mb-2">
+                Sort By
+              </label>
+              <select
+                value={localFilters.sortBy ? `${localFilters.sortBy}_${localFilters.sortOrder || 'desc'}` : ''}
+                onChange={(e) => {
+                  if (!e.target.value) {
+                    setLocalFilters({ ...localFilters, sortBy: undefined, sortOrder: undefined });
+                  } else {
+                    const [sortBy, sortOrder] = e.target.value.split('_');
+                    setLocalFilters({ 
+                      ...localFilters, 
+                      sortBy: sortBy as any,
+                      sortOrder: sortOrder as 'asc' | 'desc'
+                    });
+                  }
+                }}
+                className="w-full py-2.5 md:py-3 px-3 rounded-[4px] border border-[#dddddd] text-black bg-white focus:outline-none focus:ring-2 focus:ring-[#1f2462] focus:border-transparent"
+              >
+                <option value="">Default</option>
+                <option value="min_price_asc">Price: Low to High</option>
+                <option value="min_price_desc">Price: High to Low</option>
+                <option value="created_at_desc">Newest First</option>
+                <option value="created_at_asc">Oldest First</option>
+              </select>
             </div>
 
             {/* Buttons */}

@@ -56,6 +56,9 @@ export interface Property {
   bathrooms?: number;
   area: number;
   location: string;
+  city?: string;
+  locality?: string;
+  category?: string;
   developer?: string;
   amenities: string[];
   mainImage: string;
@@ -226,6 +229,18 @@ function mapApiPropertyToProperty(apiProperty: ApiProperty): Property {
       bathrooms = Math.floor(minBathrooms);
     }
   }
+
+  // City - extract from API
+  const city = apiProperty.city && typeof apiProperty.city === 'string' && apiProperty.city.trim() !== '' 
+    ? apiProperty.city : undefined;
+
+  // Locality - extract from API
+  const locality = apiProperty.locality && typeof apiProperty.locality === 'string' && apiProperty.locality.trim() !== '' 
+    ? apiProperty.locality : undefined;
+
+  // Category - extract from API (Residential/Commercial)
+  const category = apiProperty.category && typeof apiProperty.category === 'string' && apiProperty.category.trim() !== '' 
+    ? apiProperty.category : undefined;
 
   // Location - combine multiple fields
   let location = apiProperty.location || '';
@@ -411,6 +426,9 @@ function mapApiPropertyToProperty(apiProperty: ApiProperty): Property {
     price,
     area,
     location,
+    city,
+    locality,
+    category,
     developer: developer || undefined,
     amenities,
     mainImage: finalMainImage,
@@ -449,20 +467,96 @@ function mapApiPropertyToProperty(apiProperty: ApiProperty): Property {
 }
 
 export interface FilterOptions {
-  type?: string;
+  type?: string | string[];
   bedrooms?: number;
-  bathrooms?: number;
   minPrice?: number;
   maxPrice?: number;
-  listingType?: 'sale' | 'rent';
+  minArea?: number;
+  maxArea?: number;
   city?: string;
+  locality?: string;
   search?: string;
+  sortBy?: 'created_at' | 'updated_at' | 'min_price' | 'max_price';
+  sortOrder?: 'asc' | 'desc';
 }
 
-// All filtering is done client-side
-// API is only used to fetch all properties without filters
+// Convert FilterOptions to ApiFilterOptions for API calls
+function convertToApiFilters(filters: FilterOptions): ApiFilterOptions {
+  const apiFilters: ApiFilterOptions = {};
+  
+  // Property Type filter - support single or multiple types
+  // Only send if we have actual values (not empty strings/arrays)
+  if (filters.type) {
+    if (typeof filters.type === 'string' && filters.type.trim() !== '') {
+      apiFilters.type = [filters.type];
+    } else if (Array.isArray(filters.type) && filters.type.length > 0) {
+      apiFilters.type = filters.type;
+    }
+  }
+  
+  // City filter - only send if not empty
+  if (filters.city && filters.city.trim() !== '') {
+    apiFilters.city = filters.city;
+  }
+  
+  // Locality filter (more specific than city) - only send if not empty
+  if (filters.locality && filters.locality.trim() !== '') {
+    apiFilters.locality = filters.locality;
+  }
+  
+  // Price range filters - only send if > 0
+  if (filters.minPrice && filters.minPrice > 0) {
+    apiFilters.min_price = filters.minPrice;
+  }
+  
+  if (filters.maxPrice && filters.maxPrice > 0) {
+    apiFilters.max_price = filters.maxPrice;
+  }
+  
+  // Area/Size range filters - only send if > 0
+  if (filters.minArea && filters.minArea > 0) {
+    apiFilters.min_sq_ft = filters.minArea;
+  }
+  
+  if (filters.maxArea && filters.maxArea > 0) {
+    apiFilters.max_sq_ft = filters.maxArea;
+  }
+  
+  // Bedrooms filter - DON'T SEND, causes 500 error
+  // Backend has Prisma enum bug that causes 500 errors
+  // Keeping this disabled until backend is fixed
+  // if (filters.bedrooms !== undefined && filters.bedrooms > 0) {
+  //   apiFilters.min_bedrooms = [filters.bedrooms.toString()];
+  // }
+  
+  // Sort options - only send if defined
+  if (filters.sortBy) {
+    apiFilters.sort_by = filters.sortBy;
+  }
+  
+  if (filters.sortOrder) {
+    apiFilters.sort_order = filters.sortOrder;
+  }
+  
+  // Search term - only include actual search text
+  if (filters.search && filters.search.trim() !== '') {
+    apiFilters.search = filters.search.trim();
+  }
+  
+  // Debug logging
+  if (process.env.NODE_ENV === 'development') {
+    console.log('=== Converting Filters ===');
+    console.log('Input filters:', filters);
+    console.log('API filters:', apiFilters);
+  }
+  
+  return apiFilters;
+}
 
-// Fetch all properties from API (no filters - all filtering is done client-side)
+// Note: getAllProperties fetches without filters (used for related properties, etc.)
+// For filtered results, use getPaginatedProperties which uses API-based filtering
+
+// Fetch all properties from API (without filters - used for related properties)
 export async function getAllProperties(page: number = 1, limit: number = 100): Promise<Property[]> {
   try {
     // Fetch all properties without any filters
@@ -540,7 +634,9 @@ export function formatPrice(price: number): string {
   return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// Filter properties (ALL filtering is done client-side)
+// Filter properties (DEPRECATED - Now using API-based filtering)
+// This function is kept for backward compatibility but should not be used in new code
+// All filtering should be done via API in getPaginatedProperties which uses convertToApiFilters
 export function filterProperties(properties: Property[], filters: FilterOptions): Property[] {
   return properties.filter((property) => {
     // Search filter - search in title, description, location, and type
@@ -631,39 +727,60 @@ export async function getPaginatedProperties(
   limit: number = 20
 ): Promise<PaginatedPropertiesResult> {
   try {
-    // Fetch ALL properties from API without any filters
-    // All filtering is done client-side for reliability
-    // Note: API has a max limit, so we use 100 which is typically accepted
-    const fetchLimit = 100;
-    const response = await fetchProperties({}, 1, fetchLimit);
+    // Convert FilterOptions to ApiFilterOptions
+    const apiFilters = convertToApiFilters(filters);
+    
+    // Call API with filters - API handles filtering server-side
+    const response = await fetchProperties(apiFilters, page, limit);
     
     if (response.success && response.data) {
       // Map API response to Property objects
-      const allProperties = response.data.map(mapApiPropertyToProperty);
+      let properties = response.data.map(mapApiPropertyToProperty);
       
-      // Apply ALL filters client-side
-      const filteredProperties = filterProperties(allProperties, filters);
+      // WORKAROUND: Apply client-side filtering for bedrooms
+      // Backend has Prisma enum bug - it expects enum but receives strings
+      // This causes 500 errors, so we filter client-side as temporary workaround
+      let clientSideFiltered = false;
+      
+      if (filters.bedrooms !== undefined && filters.bedrooms > 0) {
+        properties = properties.filter((p) => {
+          return p.bedrooms !== undefined && p.bedrooms >= filters.bedrooms!;
+        });
+        clientSideFiltered = true;
+      }
+      
+      // Get pagination info from API response
+      // If we did client-side filtering, recalculate pagination
+      let total = response.pagination?.total || properties.length;
+      let totalPages = response.pagination?.total_pages || Math.ceil(total / limit);
+      
+      // Re-paginate if we did client-side filtering
+      if (clientSideFiltered) {
+        total = properties.length;
+        totalPages = Math.ceil(total / limit);
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+        properties = properties.slice(startIndex, endIndex);
+      }
       
       // Debug logging
       if (process.env.NODE_ENV === 'development') {
-        console.log('=== Client-side Filtering ===');
+        console.log('=== API Filtering ===');
         console.log('Filters applied:', filters);
-        console.log('Total fetched from API:', allProperties.length);
-        console.log('After filtering:', filteredProperties.length);
+        console.log('API Filters:', apiFilters);
+        console.log('Properties returned:', properties.length);
+        console.log('Total:', total);
+        console.log('Total Pages:', totalPages);
+        if (filters.bedrooms) {
+          console.warn('⚠️ Bedrooms filter applied client-side (backend Prisma enum bug)');
+        }
       }
       
-      // Calculate pagination for filtered results
-      const total = filteredProperties.length;
-      const totalPages = Math.ceil(total / limit);
-      const startIndex = (page - 1) * limit;
-      const endIndex = startIndex + limit;
-      const paginatedProperties = filteredProperties.slice(startIndex, endIndex);
-      
       return {
-        properties: paginatedProperties,
+        properties,
         pagination: {
-          page,
-          limit,
+          page: response.pagination?.page || page,
+          limit: response.pagination?.limit || limit,
           total,
           totalPages,
         },
