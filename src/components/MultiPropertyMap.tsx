@@ -229,9 +229,10 @@ export default function MultiPropertyMap({ properties, height = "450px", onMarke
 
     // Create custom round marker icon with developer logo and colored border
     const createPropertyIcon = (property: Property, isSelected: boolean = false) => {
-        // Use developer name or region name for properties without developer
-        const displayName = property.developer || property.location;
-        const developerName = displayName.toLowerCase();
+        // Use first word of property title, or developer name, or location as fallback
+        const firstWord = property.title?.split(' ')[0] || property.developer || property.location;
+        const displayName = firstWord;
+        const developerName = (property.developer || property.location || property.title).toLowerCase();
         const logoUrl = developerLogos[developerName] || "/white-logo.svg"; // Fallback to white logo
 
         // Generate a consistent color for each developer

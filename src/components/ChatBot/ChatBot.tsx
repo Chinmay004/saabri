@@ -799,7 +799,7 @@ export default function ChatBot({ isOpen: externalIsOpen, onClose }: ChatBotProp
     }, 1000);
   };
 
-  // Handle escape key and body scroll
+  // Handle escape key - don't block body scroll
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
@@ -809,12 +809,11 @@ export default function ChatBot({ isOpen: externalIsOpen, onClose }: ChatBotProp
 
     if (isOpen) {
       document.addEventListener("keydown", handleEscape);
-      document.body.style.overflow = "hidden";
+      // Don't block body scroll - allow background to be scrollable
     }
 
     return () => {
       document.removeEventListener("keydown", handleEscape);
-      document.body.style.overflow = "unset";
     };
   }, [isOpen, handleClose]);
 
@@ -833,9 +832,6 @@ export default function ChatBot({ isOpen: externalIsOpen, onClose }: ChatBotProp
         transition={{ delay: 0.5 }}
       >
         <MessageCircle size={28} className="group-hover:scale-110 transition-transform" />
-        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-semibold animate-pulse">
-          1
-        </span>
       </motion.button>
     );
   }, [externalIsOpen, handleOpen]);
@@ -855,13 +851,7 @@ export default function ChatBot({ isOpen: externalIsOpen, onClose }: ChatBotProp
             className="fixed inset-0 z-50 flex items-end justify-end p-4 md:p-6 pointer-events-none"
           >
             {/* Backdrop - removed blur, only transparent overlay for click-to-close */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={handleClose}
-              className="absolute inset-0 bg-transparent pointer-events-auto"
-            />
+            {/* Removed backdrop to allow background scrolling */}
 
             {/* Chat Window - Only animate on mount/unmount, not on content changes */}
             <motion.div
