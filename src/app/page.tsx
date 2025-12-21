@@ -17,7 +17,7 @@ export default function Home() {
       <FeaturedAreas />
       <Blogs />
       <Hotspots />
-      {/* <ChatBot /> */}
+      <ChatBot />
       <Testimonials />
       <FAQ />
     </main>
