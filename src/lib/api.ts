@@ -138,6 +138,11 @@ export interface ApiProperty {
   listingType?: 'sale' | 'rent';
   furnished?: string;
   payment_plan?: string;
+  roi?: {
+    firstYear?: number;
+    thirdYear?: number;
+    fifthYear?: number;
+  };
   [key: string]: any; // For any additional fields
 }
 

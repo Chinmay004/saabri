@@ -1,4 +1,5 @@
 import { fetchProperties, fetchPropertyById as fetchPropertyByIdApi, ApiProperty, ApiFilterOptions } from './api';
+import { calculateROI } from '@/utils/calculateROI';
 
 // Helper function to convert text numbers to integers
 function textToNumber(text: string): number | null {
@@ -71,6 +72,11 @@ export interface Property {
   security?: boolean | string;
   furnished?: string;
   paymentPlan?: string;
+  roi?: {
+    firstYear: number;
+    thirdYear: number;
+    fifthYear: number;
+  };
 }
 
 // Map API property to our Property interface
@@ -461,6 +467,39 @@ function mapApiPropertyToProperty(apiProperty: ApiProperty): Property {
   }
   if (paymentPlan !== undefined) {
     property.paymentPlan = paymentPlan;
+  }
+
+  // ROI data - map from API response, or calculate if missing
+  if (apiProperty.roi && typeof apiProperty.roi === 'object') {
+    const roiData = apiProperty.roi as { firstYear?: number; thirdYear?: number; fifthYear?: number };
+    if (roiData.firstYear !== undefined || roiData.thirdYear !== undefined || roiData.fifthYear !== undefined) {
+      property.roi = {
+        firstYear: roiData.firstYear ?? 0,
+        thirdYear: roiData.thirdYear ?? 0,
+        fifthYear: roiData.fifthYear ?? 0,
+      };
+    }
+  } else {
+    // Calculate ROI based on location and property type if not in API response
+    const locationForROI = property.location || property.locality || property.city || '';
+    const propertyTypeForROI = property.type || (Array.isArray(apiProperty.type) ? apiProperty.type[0] : apiProperty.type);
+    
+    if (locationForROI) {
+      try {
+        const calculatedROI = calculateROI(locationForROI, propertyTypeForROI);
+        if (calculatedROI) {
+          property.roi = calculatedROI;
+        }
+      } catch (error) {
+        console.warn('Error calculating ROI:', error);
+        // Use fallback values if calculation fails
+        property.roi = {
+          firstYear: 9.3,
+          thirdYear: 15.8,
+          fifthYear: 22.1,
+        };
+      }
+    }
   }
 
   return property;

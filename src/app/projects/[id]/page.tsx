@@ -9,6 +9,7 @@ import InquiryModal from '../../../components/property/inquiry-modal';
 import DescriptionModal from '../../../components/property/description-modal';
 import ImageViewerModal from '../../../components/property/image-viewer-modal';
 import AmenitiesModal from '../../../components/property/amenities-modal';
+import ROICalculator from '../../../components/ROICalculator';
 import { getPropertyById, getRelatedProperties, formatPrice, Property } from '../../../lib/properties';
 import { memo } from 'react';
 
@@ -147,6 +148,10 @@ export default function PropertyDetailPage() {
           const propertyData = await getPropertyById(id);
           
           if (propertyData) {
+            // Debug: Log ROI data
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Property ROI data:', propertyData.roi);
+            }
             setProperty(propertyData);
             
             // Load related properties asynchronously after main property is set
@@ -483,6 +488,24 @@ export default function PropertyDetailPage() {
 
           {/* Property Details Grid */}
           <PropertyDetailsGrid property={property} onOpenAmenities={handleOpenAmenities} />
+
+          {/* ROI Calculator */}
+          <div className="mb-6 md:mb-8 lg:mb-[30px]">
+            {property.roi ? (
+              <ROICalculator roi={property.roi} />
+            ) : (
+              <div className="w-full bg-gray-50 py-8 px-4 rounded-lg text-center">
+                <p className="text-gray-500 text-sm">
+                  ROI Calculator data not available for this property
+                </p>
+                {process.env.NODE_ENV === 'development' && (
+                  <p className="text-xs text-gray-400 mt-2">
+                    Debug: property.roi = {JSON.stringify(property.roi)}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Related Properties - Memoized */}
           {relatedPropertiesSection}
