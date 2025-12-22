@@ -35,7 +35,7 @@ const Footer = () => {
                 className="font-sans text-sm md:text-base text-[#484848] hover:text-gray-900 transition-colors duration-200 relative group"
               >
                 <span className="relative">
-                  Projects.
+                  Projects
                   <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gray-900 transition-all duration-200 group-hover:w-full"></span>
                 </span>
               </Link>
@@ -44,7 +44,7 @@ const Footer = () => {
                 className="font-sans text-sm md:text-base text-[#484848] hover:text-gray-900 transition-colors duration-200 relative group"
               >
                 <span className="relative">
-                  About Us.
+                  About Us
                   <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gray-900 transition-all duration-200 group-hover:w-full"></span>
                 </span>
               </Link>
@@ -107,7 +107,7 @@ const Footer = () => {
                 <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
               </svg>
               <p className="font-sans text-sm md:text-base leading-relaxed text-center md:text-left group-hover:underline">
-                Office no 1706, executive bay tower, business bay, dubai
+                Office No. 1706, Executive Bay Tower, Business Bay, Dubai
               </p>
             </a>
           </div>

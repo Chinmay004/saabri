@@ -824,7 +824,7 @@ export default function ChatBot({ isOpen: externalIsOpen, onClose }: ChatBotProp
     return (
       <motion.button
         onClick={handleOpen}
-        className="fixed bottom-6 right-6 z-50 bg-[#1A1F56] text-white p-4 rounded-full shadow-lg hover:bg-[#1f2462] transition-all duration-300 flex items-center justify-center group"
+        className="fixed bottom-6 right-6 z-999999 bg-[#1A1F56] text-white p-4 rounded-full shadow-lg hover:bg-[#1f2462] transition-all duration-300 flex items-center justify-center group"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         initial={{ opacity: 0, scale: 0 }}
@@ -848,7 +848,7 @@ export default function ChatBot({ isOpen: externalIsOpen, onClose }: ChatBotProp
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end justify-end p-4 md:p-6 pointer-events-none"
+            className="fixed inset-0 z-999999 flex items-end justify-end p-4 md:p-6 pointer-events-none"
           >
             {/* Backdrop - removed blur, only transparent overlay for click-to-close */}
             {/* Removed backdrop to allow background scrolling */}
@@ -859,7 +859,7 @@ export default function ChatBot({ isOpen: externalIsOpen, onClose }: ChatBotProp
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: 400, scale: 0.9 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="relative w-full max-w-md h-[85vh] md:h-[600px] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col pointer-events-auto"
+              className="relative z-999999 w-full max-w-md h-[85vh] md:h-[600px] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
             >
            {/* Header */}
