@@ -6,8 +6,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 export default function Header() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  
+  // Don't show header on admin pages
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
 
   const isActive = (path: string) => {
     if (path === '/') {
