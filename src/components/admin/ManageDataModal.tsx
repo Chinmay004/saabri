@@ -306,6 +306,7 @@ export default function ManageDataModal({
       intent: '',
       status: '',
       salesStage: '',
+      assignedTo: '',
     });
     setMoveData({
       projectName: '',
