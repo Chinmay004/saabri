@@ -47,17 +47,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Only admins can create enquiries
-  if (user.role !== 'ADMIN') {
-    return NextResponse.json(
-      { error: 'Only admins can create enquiries' },
-      { status: 403 }
-    );
-  }
-
+  // Both admins and agents can create enquiries
   try {
     await initializeDatabase();
-    return await createEnquiry(request);
+    return await createEnquiry(request, user);
   } catch (error) {
     console.error('General enquiries API error:', error);
     return NextResponse.json(
@@ -221,7 +214,7 @@ async function getEnquiries(request: NextRequest, user: any) {
   });
 }
 
-async function createEnquiry(request: NextRequest) {
+async function createEnquiry(request: NextRequest, user: any) {
   const {
     first_name,
     last_name,
@@ -250,6 +243,18 @@ async function createEnquiry(request: NextRequest) {
   }
 
   await initializeDatabase();
+
+  // Determine assignment: if agent creates enquiry, auto-assign to them
+  // If admin creates enquiry, use the assigned_to value from request (can be null)
+  let finalAssignedTo = null;
+  if (user.role === 'AGENT') {
+    finalAssignedTo = user.userId;
+  } else if (assigned_to !== undefined && assigned_to !== null && assigned_to !== '') {
+    finalAssignedTo = parseInt(assigned_to, 10);
+    if (isNaN(finalAssignedTo)) {
+      finalAssignedTo = null;
+    }
+  }
 
   const result = await sql`
     INSERT INTO general_enquiries (
@@ -288,7 +293,7 @@ async function createEnquiry(request: NextRequest) {
       ${date_of_birth || null},
       ${home_address || null},
       'HOT',
-      ${assigned_to || null}
+      ${finalAssignedTo}
     )
     RETURNING *
   `;

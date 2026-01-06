@@ -80,10 +80,12 @@ A comprehensive Customer Relationship Management (CRM) system built with Next.js
 
 ### Agent
 - Access to dashboard and enquiries
+- Can create enquiries (automatically assigned to themselves)
 - Can only view leads/enquiries assigned to them
-- Can convert enquiries to leads (assigned to themselves)
+- Can convert assigned enquiries to leads (automatically assigned to themselves)
 - Can edit assigned leads/enquiries
-- Cannot delete or create users
+- Can delete assigned leads/enquiries
+- Cannot create or delete users
 - Cannot change assignments
 
 ## Database Schema
