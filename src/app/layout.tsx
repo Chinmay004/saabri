@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import Loader from "../components/Loader";
+import { AuthProvider } from "@/context/AuthContext";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -58,10 +59,12 @@ export default function RootLayout({
       <body
         className={`${manrope.variable} antialiased`}
       >
-        <Loader />
-        <Header />
-        {children}
-        <Footer />
+        <AuthProvider>
+          <Loader />
+          <Header />
+          {children}
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );

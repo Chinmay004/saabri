@@ -1,8 +1,18 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 
 // Footer - Site footer with links, contact info, and social media
 const Footer = () => {
+  const pathname = usePathname();
+  
+  // Don't show footer on admin pages
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
+  
   return (
     <footer className="bg-gradient-to-b text-center md:text-left from-gray-50 to-white border-t border-gray-100 px-5 md:px-8 lg:px-16 xl:px-24 py-12 md:py-16">
       <div className="max-w-7xl mx-auto">

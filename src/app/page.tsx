@@ -15,7 +15,7 @@ export default function Home() {
       <Trustedby />
       <Features />
       <FeaturedAreas />
-      <Blogs />
+      {/* <Blogs /> */}
       <Hotspots />
       <ChatBot />
       <Testimonials />
